@@ -95,7 +95,7 @@ metadata.ER_POS <- metadata %>%
   as.data.frame() %>% 
   filter(ER_IHC == "Positve")  # Keep only ER+ patients
 
-# 2.5.1 Complete metadata only for ER+ useful for recurrence (min 2 montths, max 180 months)
+# 2.5.1 Complete metadata only for ER+ useful for recurrence (min 2 months, max 180 months)
 
 metadata.ER_POS_REC <- metadata.ER_POS %>% 
   as.data.frame() %>% 
