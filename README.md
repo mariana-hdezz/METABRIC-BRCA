@@ -218,3 +218,4 @@ R version 4.5.2 (2025-10-31)
 | paletteer | 1.7.0 | [Website](https://emilhvitfeldt.github.io/paletteer/) · [GitHub](https://github.com/EmilHvitfeldt/paletteer) |
 | patchwork | 1.3.2 | [Website](https://patchwork.data-imaginist.com) · [GitHub](https://github.com/thomasp85/patchwork) |
 | ggrepel | 0.9.8 | [Website](https://ggrepel.slowkow.com/) · [GitHub](https://github.com/slowkow/ggrepel) |
+| phenoTest | 1.60 |
