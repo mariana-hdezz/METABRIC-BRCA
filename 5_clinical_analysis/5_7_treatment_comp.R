@@ -114,11 +114,18 @@ for (i in c(1:2)) {
           "HORMONE" = "Hormone therapy",
           "SURGERY" = "Surgery Modality"
         ),
-        EVENT_STAT = c("0" = ifelse(analysis == "recurrence" , "Non-recurrent", "Alive"), "1" = ifelse(analysis == "recurrence" , "Recurrent", "Deceased"))
+        EVENT_STAT = c(
+          "0" = ifelse(analysis == "recurrence" , "Non-recurrent", "Alive"),
+          "1" = ifelse(analysis == "recurrence" , "Recurrent", "Deceased")
+        )
       )
     ) +
     scale_fill_paletteer_d("khroma::iridescent", direction = -1) +
-    labs(title = paste0("Score change on treatment: METABRIC (", str_to_title(analysis), ")")) +
+    labs(title = paste0(
+      "Score change on treatment: METABRIC (",
+      stringr::str_to_title(analysis),
+      ")"
+    )) +
     theme_classic(base_size = 12) +
     theme(
       strip.background = element_rect(
@@ -182,7 +189,7 @@ for (i in c(1:2)) {
       Value = case_when(
         tolower(Value) == "mastectomy nos" ~ "Mastectomy",
         tolower(Value) == "modified radical mastectomy" ~ "Modified Radical Mastectomy",
-        TRUE ~ str_to_title(Value) # Capitalizes first letter of other categories like "Lumpectomy", "Other"
+        TRUE ~ stringr::str_to_title(Value) # Capitalizes first letter of other categories like "Lumpectomy", "Other"
       )
     )
   
@@ -196,7 +203,10 @@ for (i in c(1:2)) {
       scales = "free_x",
       ncol = 2,
       labeller = labeller(
-        EVENT_STAT = c("0" = ifelse(analysis == "recurrence" , "Non-recurrent", "Alive"), "1" = ifelse(analysis == "recurrence" , "Recurrent", "Deceased")),
+        EVENT_STAT = c(
+          "0" = ifelse(analysis == "recurrence" , "Non-recurrent", "Alive"),
+          "1" = ifelse(analysis == "recurrence" , "Recurrent", "Deceased")
+        ),
         Parameter  = as_labeller(
           c(
             "NEO" = "Neoadjuvant therapy",
@@ -204,19 +214,25 @@ for (i in c(1:2)) {
             "SURGERY" = "Surgery modality",
             "TARG_TX" = "Targeted treatment"
           )
-        ))
+        )
+      )
     ) +
     scale_fill_paletteer_d(
       "khroma::iridescent",
       direction = -1,
       labels = function(x)
-        str_to_title(x)
+        stringr::str_to_title(x)
     ) +
     theme_classic(base_size = 12) +
-    labs(x = "Treatment modality",
-         y = "",
-         fill = "Treated",
-         title = paste0("Score change on treatment: TCGA (", str_to_title(analysis), ")")
+    labs(
+      x = "Treatment modality",
+      y = "",
+      fill = "Treated",
+      title = paste0(
+        "Score change on treatment: TCGA (",
+        stringr::str_to_title(analysis),
+        ")"
+      )
     ) +
     scale_x_discrete(labels = c("0" = "Untreated", "1" = "Treated")) +
     theme(
@@ -353,9 +369,8 @@ tx <- c("HORMONE", "CHEMO")
 tx_cox_gse96058 <- list()
 
 for (i in seq_along(tx)) {
-  
   formula_gse96058 <- as.formula(paste("surv_obj ~ ", tx[i], " * SCORE", collapse = "")) # Establish formula
-
+  
   tx_cox_gse96058[[paste(i, tx[i])]] <- summary(coxph(formula_gse96058, data = proof_genes_pt_gse96058_cox))
   
 }
@@ -364,30 +379,98 @@ for (i in seq_along(tx)) {
 
 
 (((score_tx_surv |
-    score_tx_tcga_surv |
-    score_tx_gse96058) |
-  (score_tx_rec |
-     score_tx_tcga_rec)) + 
-  plot_layout(widths = c(1,1,1,2))) + 
+     score_tx_tcga_surv |
+     score_tx_gse96058) |
+    (score_tx_rec |
+       score_tx_tcga_rec)
+) +
+    plot_layout(widths = c(1, 1, 1, 2))) +
   plot_annotation(tag_levels = "A")
 
 
+colapse_list <- lapply(seq_along(wilcox_treatment_gse96058), function(i) {
+  wilcox_treatment_gse96058[[i]] %>%
+    as.data.frame() %>%
+    pivot_longer(cols = 1,
+                 names_to = "Variable",
+                 values_to = "Value")
+})
 
 
-wilcox_treatment_tcga_rec 
-wilcox_treatment_rec
-score_tx_tcga_rec
-score_tx_rec 
-tx_cox_txga_rec
-tx_cox_rec
+wilcox_gse96058_df <- do.call(rbind, colapse_list)
 
 
- 
-wilcox_treatment_surv 
-wilcox_treatment_tcga_surv
-wilcox_treatment_gse96058
 
- 
-tx_cox_surv 
+
+
+tx_cox_surv
 tx_cox_txga_surv
 tx_cox_gse96058
+
+rbind(
+  "Survival",
+  wilcox_treatment_surv %>%
+    dplyr::select(Parameter, Value, adj_p_value) %>%
+    rename("Variable" = Parameter, "Adjusted p value" = adj_p_value) %>%
+    mutate(Cohort = "METABRIC")
+  ,
+  
+  wilcox_treatment_tcga_surv %>%
+    dplyr::select(variable, level, adj_p_value) %>%
+    rename(
+      "Value" = level,
+      "Adjusted p value" = adj_p_value,
+      "Variable" = variable
+    ) %>%
+    mutate(Cohort = "TCGA"),
+  
+  wilcox_gse96058_df %>%
+    dplyr::select(Variable, Value, adj_p_value) %>%
+    rename("Adjusted p value" = adj_p_value) %>%
+    mutate(Cohort = "GSE96058"),
+  
+  "Recurrence",
+  wilcox_treatment_rec %>%
+    dplyr::select(Parameter, Value, adj_p_value) %>%
+    rename("Variable" = Parameter, "Adjusted p value" = adj_p_value) %>%
+    mutate(Cohort = "METABRIC"),
+  
+  wilcox_treatment_tcga_rec %>%
+    dplyr::select(variable, level, adj_p_value) %>%
+    rename(
+      "Value" = level,
+      "Adjusted p value" = adj_p_value,
+      "Variable" = variable
+    ) %>%
+    mutate(Cohort = "TCGA")
+  
+) %>%
+  filter(! Value == "") %>% 
+  relocate(Cohort) %>% 
+  mutate(Variable = case_when(
+    Variable == "CHEMO" ~ "Chemotherapy",
+    Variable == "HORMONE" ~ "Hormone therapy",
+    Variable == "SURGERY" ~ "Surgical intervention",
+    Variable == "RADIO" ~ "Radiotherapy",
+    Variable == "NEO" ~ "Neoadjuvant chemotherapy",
+    Variable == "OTHER_TX" ~ "Other treatment",
+    Variable == "TARG_TX" ~ "Targeted treatment",
+  )) %>% 
+flextable() %>%
+  merge_at(i = 1, j = 1:4) %>%
+  merge_at(i = 20, j = 1:4) %>% 
+  merge_at(i = 2:7, j = 1) %>% 
+  hline(i = 7) %>% 
+  merge_at(i = 8:15, j = 1) %>% 
+  hline(i = 15) %>% 
+  merge_at(i = 16:19, j = 1) %>% 
+  hline(i = 19) %>% 
+  merge_at(i = 21:26, j = 1) %>% 
+  hline(i = 26) %>% 
+  merge_at(i = 27:33, j = 1) 
+  
+  
+score_tx_tcga_rec
+score_tx_rec
+tx_cox_txga_rec
+tx_cox_rec
